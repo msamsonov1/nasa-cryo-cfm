@@ -1,0 +1,1334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CRYO-CFM SENTINEL // NASA SBIR Phase I Platform</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Space Grotesk', sans-serif;
+      background-color: #07090e;
+      color: #e2e8f0;
+      overflow-x: hidden;
+    }
+    .mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    /* Custom glow and grid textures */
+    .bg-grid {
+      background-size: 32px 32px;
+      background-image: 
+        linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    }
+    .hud-border {
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      box-shadow: inset 0 0 15px rgba(56, 189, 248, 0.03), 0 4px 20px rgba(0, 0, 0, 0.5);
+    }
+    .hud-border-amber {
+      border: 1px solid rgba(245, 158, 11, 0.25);
+      box-shadow: inset 0 0 15px rgba(245, 158, 11, 0.03);
+    }
+    /* Custom sliders */
+    input[type=range] {
+      -webkit-appearance: none;
+      background: #1e293b;
+      height: 6px;
+      border-radius: 9999px;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      height: 16px;
+      width: 16px;
+      border-radius: 50%;
+      background: #38bdf8;
+      cursor: pointer;
+      box-shadow: 0 0 8px #38bdf8;
+    }
+    /* Custom scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0b0f19;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #38bdf8;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-grid flex flex-col justify-between selection:bg-cyan-500 selection:text-black">
+
+  <!-- TOP HUD HEADER -->
+  <header class="border-b border-cyan-950/60 bg-slate-950/80 backdrop-blur-md sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-4">
+      
+      <!-- Brand & Mission Status -->
+      <div class="flex items-center space-x-3">
+        <div class="relative flex items-center justify-center w-10 h-10 rounded-lg bg-cyan-950/80 border border-cyan-500/40 text-cyan-400">
+          <svg class="w-6 h-6 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+          <span class="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-cyan-500"></span>
+          </span>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <span class="text-xs font-bold tracking-widest text-cyan-400 uppercase mono">CRYO-CFM SENTINEL</span>
+            <span class="px-1.5 py-0.5 rounded text-[10px] bg-cyan-950 text-cyan-300 border border-cyan-800 mono">TLM-v5.2-ORBIT</span>
+          </div>
+          <h1 class="text-sm sm:text-base font-bold text-slate-100 tracking-tight">
+            Autonomous Slosh, Wall Micro-Boil & Cavitation Inhibitor
+          </h1>
+        </div>
+      </div>
+
+      <!-- Quick Telemetry Indicators -->
+      <div class="flex items-center space-x-3 text-xs mono">
+        <div class="hidden sm:flex flex-col text-right">
+          <span class="text-slate-400 text-[10px]">TARGET TARGETING</span>
+          <span class="text-emerald-400 font-semibold">TMI (TRANS-MARS INJ)</span>
+        </div>
+        <div class="h-7 w-[1px] bg-slate-800 hidden sm:block"></div>
+        <div class="flex flex-col text-right">
+          <span class="text-slate-400 text-[10px]">SUMP CRITICAL NPSH</span>
+          <span id="headerNPSH" class="text-cyan-400 font-semibold">+2.45 m (NOMINAL)</span>
+        </div>
+        <div class="h-7 w-[1px] bg-slate-800"></div>
+        <div class="flex flex-col text-right">
+          <span class="text-slate-400 text-[10px]">SBIR OPPORTUNITY</span>
+          <span class="text-amber-400 font-semibold">$225,000 PH-I</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- NAVIGATION TABS -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 border-t border-slate-800/80">
+      <nav class="flex space-x-2 sm:space-x-8 -mb-px text-xs sm:text-sm font-medium">
+        <button id="tabBtn-sim" onclick="switchTab('sim')" class="tab-button border-b-2 border-cyan-500 text-cyan-400 py-3 px-1 inline-flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+          Interactive Simulation
+        </button>
+
+        <button id="tabBtn-proposal" onclick="switchTab('proposal')" class="tab-button border-b-2 border-transparent text-slate-400 hover:text-slate-200 py-3 px-1 inline-flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          NASA SBIR / STTR Proposal ($225k)
+        </button>
+
+        <button id="tabBtn-contact" onclick="switchTab('contact')" class="tab-button border-b-2 border-transparent text-slate-400 hover:text-slate-200 py-3 px-1 inline-flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+          Partner &amp; Contact
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- MAIN VIEWPORT WRAPPER -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full flex-1">
+    
+    <!-- ========================================== -->
+    <!-- TAB 1: INTERACTIVE SIMULATION & CONTROLLER -->
+    <!-- ========================================== -->
+    <div id="tabContent-sim" class="space-y-6">
+
+      <!-- Alert Banner for Cavitation Tripping -->
+      <div id="cavitationBanner" class="hidden rounded-lg bg-red-950/80 border border-red-500/80 p-4 transition-all duration-300">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-3">
+            <svg class="w-6 h-6 text-red-400 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            <div>
+              <h2 class="text-sm font-bold text-red-200 mono uppercase tracking-wider">CRITICAL TURBOPUMP CAVITATION VAPOR LOCK IMMINENT</h2>
+              <p class="text-xs text-red-300">Intake bulk density collapsed below critical boundary (<span id="alertDensityVal">1080</span> kg/m³). Slosh wave thermal micro-flashing ingested into engine manifold!</p>
+            </div>
+          </div>
+          <button onclick="emergencyRCSBoost()" class="px-3 py-1.5 bg-red-600 hover:bg-red-500 text-white rounded text-xs mono font-bold shadow-lg transition">
+            MANUAL RCS OVERRIDE (PULSE 150N)
+          </button>
+        </div>
+      </div>
+
+      <!-- Simulator Layout: 3 Columns on LG -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- Left Column: Controls & Cryo Thermals (3 cols) -->
+        <div class="lg:col-span-3 space-y-4">
+          
+          <!-- Fluid System Card -->
+          <div class="rounded-xl bg-slate-900/90 hud-border p-4">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+              <span class="text-xs font-semibold text-cyan-400 mono">PROPELLANT SYSTEM</span>
+              <span class="px-2 py-0.5 rounded text-[11px] bg-slate-800 text-cyan-300 mono">LOX (90.2 K)</span>
+            </div>
+            
+            <div class="mt-3 space-y-2 text-xs">
+              <div class="flex justify-between">
+                <span class="text-slate-400">Sat Temp ($T_{sat}$):</span>
+                <span class="mono text-slate-200">90.18 K</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-400">Tank Ullage Press ($P_u$):</span>
+                <span class="mono text-slate-200">182.4 kPa</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-400">Wall Superheat ($\Delta T$):</span>
+                <span id="wallTempDisplay" class="mono text-amber-400 font-bold">+5.2 K (Warm MLI)</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-400">Nominal Liquid $\rho$:</span>
+                <span class="mono text-slate-200">1,141.0 kg/m³</span>
+              </div>
+            </div>
+
+            <!-- Wall Temp Slider -->
+            <div class="mt-4 pt-3 border-t border-slate-800/80">
+              <div class="flex justify-between text-[11px] mb-1">
+                <span class="text-slate-300">MLI Tank Wall Superheat:</span>
+                <span id="wallSuperheatVal" class="mono text-amber-400">5.2 K</span>
+              </div>
+              <input type="range" id="wallTempSlider" min="0.5" max="15.0" step="0.5" value="5.2" class="w-full" oninput="updateWallTemp(this.value)">
+              <div class="flex justify-between text-[9px] text-slate-500 mt-1 mono">
+                <span>0.5K (Subcooled)</span>
+                <span>8K (Boil Zone)</span>
+                <span>15K (Severe Flash)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Settling Dynamic Controls -->
+          <div class="rounded-xl bg-slate-900/90 hud-border p-4">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+              <span class="text-xs font-semibold text-cyan-400 mono">LATERAL ACCEL ($a_{lat}$)</span>
+              <span id="accelVal" class="mono text-xs text-amber-400 font-bold">0.035 m/s²</span>
+            </div>
+
+            <div class="mt-3">
+              <label class="text-[11px] text-slate-300 block mb-1">Disturbance Acceleration:</label>
+              <input type="range" id="accelSlider" min="0" max="0.25" step="0.005" value="0.035" class="w-full" oninput="updateAccel(this.value)">
+              <div class="flex justify-between text-[9px] text-slate-500 mt-1 mono">
+                <span>0.00g (Deep Drift)</span>
+                <span>0.10g (Slew)</span>
+                <span>0.25g (Burn)</span>
+              </div>
+            </div>
+
+            <div class="mt-4 pt-3 border-t border-slate-800 space-y-2">
+              <div class="flex justify-between text-[11px]">
+                <span class="text-slate-400">Slosh Resonance ($\omega$):</span>
+                <span id="sloshFreq" class="mono text-slate-200">0.38 Hz</span>
+              </div>
+              <div class="flex justify-between text-[11px]">
+                <span class="text-slate-400">Bond Number ($Bo$):</span>
+                <span class="mono text-slate-200">4.82 (Capillary DOM)</span>
+              </div>
+              <button onclick="induceImpulse()" class="w-full mt-2 py-2 px-3 bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-500/50 rounded-lg text-cyan-300 text-xs font-semibold mono transition flex items-center justify-center gap-2">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                Inject Spacecraft Slew Pulse
+              </button>
+            </div>
+          </div>
+
+          <!-- Closed Loop Controller Toggle -->
+          <div class="rounded-xl bg-slate-900/90 hud-border p-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <h2 class="text-xs font-semibold text-emerald-400 mono">AUTONOMOUS RCS CONTROLLER</h2>
+                <p class="text-[10px] text-slate-400 mt-0.5">Dynamic Sump Density Recovery</p>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="autoRCS" class="sr-only peer" checked onchange="toggleController(this.checked)">
+                <div class="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+              </label>
+            </div>
+
+            <div class="mt-3 text-xs space-y-1 text-slate-400">
+              <div class="flex justify-between text-[11px]">
+                <span>RCS Thruster State:</span>
+                <span id="rcsState" class="mono font-bold text-slate-400">STANDBY (0.0 N)</span>
+              </div>
+              <div class="w-full bg-slate-950 rounded-full h-2 overflow-hidden mt-1.5 border border-slate-800">
+                <div id="rcsThrottleBar" class="bg-gradient-to-r from-emerald-500 to-cyan-400 h-2 transition-all duration-100" style="width: 0%"></div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Center Column: Visual Cryo Sump Tank Cutaway (6 cols) -->
+        <div class="lg:col-span-6 flex flex-col space-y-4">
+          <div class="rounded-xl bg-slate-900/95 hud-border p-4 flex flex-col flex-1 relative overflow-hidden">
+            
+            <!-- Canvas HUD Overlay Header -->
+            <div class="flex flex-wrap items-center justify-between gap-2 pb-2 mb-2 border-b border-slate-800/80">
+              <div class="flex items-center space-x-2">
+                <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span class="text-xs font-bold text-slate-200 mono">PROP-TANK CUTAWAY // SUMP INLET CROSS-SECTION</span>
+              </div>
+              <div class="flex items-center space-x-3 text-[11px] mono">
+                <span class="flex items-center gap-1 text-cyan-400"><span class="w-2 h-2 rounded-full bg-cyan-400 inline-block"></span> Subcooled Liquid</span>
+                <span class="flex items-center gap-1 text-amber-400"><span class="w-2 h-2 rounded-full bg-amber-400 inline-block"></span> Wall Flash Micro-boil</span>
+                <span class="flex items-center gap-1 text-rose-400"><span class="w-2 h-2 rounded-full bg-rose-500 inline-block"></span> Cavitation Ingestion</span>
+              </div>
+            </div>
+
+            <!-- Physics Tank Canvas Container -->
+            <div class="relative w-full h-[380px] sm:h-[430px] rounded-lg bg-gradient-to-b from-slate-950 via-slate-900/60 to-slate-950 border border-slate-800/80 overflow-hidden flex items-center justify-center">
+              <canvas id="tankCanvas" class="w-full h-full block"></canvas>
+
+              <!-- Dynamic On-Canvas HUD Badges -->
+              <div class="absolute top-3 left-3 bg-slate-950/80 border border-cyan-800/50 backdrop-blur rounded px-2.5 py-1 text-[11px] mono text-cyan-300">
+                <span class="text-slate-400">MLI Boundary:</span> <span id="canvasWallLabel">95.4 K</span>
+              </div>
+
+              <div class="absolute top-3 right-3 bg-slate-950/80 border border-slate-800 backdrop-blur rounded px-2.5 py-1 text-[11px] mono flex items-center gap-2">
+                <span class="text-slate-400">INTAKE DENSITY:</span>
+                <span id="canvasDensityVal" class="text-cyan-400 font-bold text-sm">1,139.8 kg/m³</span>
+              </div>
+
+              <!-- Sump Turbopump Arrow Pointer at bottom -->
+              <div class="absolute bottom-2 inset-x-0 flex flex-col items-center pointer-events-none">
+                <div class="flex items-center space-x-1.5 px-3 py-1 rounded-full bg-slate-950/90 border border-cyan-500/30 text-[10px] mono text-slate-300">
+                  <svg class="w-3.5 h-3.5 text-cyan-400 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"/></svg>
+                  <span>MAIN ENGINE HIGH-PRESSURE TURBOPUMP INDUCER INLET</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Realtime Metrics Bar below Canvas -->
+            <div class="grid grid-cols-3 gap-2 mt-3 pt-2 text-center text-xs mono">
+              <div class="bg-slate-950/60 p-2 rounded border border-slate-800/80">
+                <span class="text-[10px] text-slate-400 block">SLOSH WAVE PEAK</span>
+                <span id="metricSloshPeak" class="text-cyan-400 font-bold text-sm">11.4 cm</span>
+              </div>
+              <div class="bg-slate-950/60 p-2 rounded border border-slate-800/80">
+                <span class="text-[10px] text-slate-400 block">WALL FLASH EVAPORATION</span>
+                <span id="metricEvapRate" class="text-amber-400 font-bold text-sm">0.074 g/s</span>
+              </div>
+              <div class="bg-slate-950/60 p-2 rounded border border-slate-800/80">
+                <span class="text-[10px] text-slate-400 block">VOID VAPOR FRACTION</span>
+                <span id="metricVoidFrac" class="text-emerald-400 font-bold text-sm">0.02%</span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Right Column: Phase-Plane Radar & Telemetry (3 cols) -->
+        <div class="lg:col-span-3 space-y-4">
+          
+          <!-- Phase Plane: a vs rho radar -->
+          <div class="rounded-xl bg-slate-900/90 hud-border p-4">
+            <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+              <span class="text-xs font-semibold text-cyan-400 mono">PHASE RADAR: $a_{lat}$ vs $\rho$</span>
+              <span class="text-[10px] text-slate-400 mono">SENTINEL MAP</span>
+            </div>
+            <p class="text-[11px] text-slate-400 my-2 leading-relaxed">
+              Real-time locus of tank sump intake density versus lateral g-load. Safe operation demands separation from the turbopump suction cavitation trip limit.
+            </p>
+
+            <div class="w-full h-[180px] bg-slate-950 rounded-lg border border-slate-800 relative overflow-hidden flex items-center justify-center">
+              <canvas id="phaseCanvas" class="w-full h-full block"></canvas>
+            </div>
+
+            <!-- Legend for Radar -->
+            <div class="mt-2.5 grid grid-cols-2 gap-1.5 text-[10px] mono text-slate-400">
+              <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Subcooled Safe Core</div>
+              <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-400"></span> Incipient Micro-Boil</div>
+              <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-red-500"></span> Cavitation Trip Line</div>
+              <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span> Operating State</div>
+            </div>
+          </div>
+
+          <!-- Live Telemetry Stream Box -->
+          <div class="rounded-xl bg-slate-900/90 hud-border p-4 flex flex-col h-[230px]">
+            <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+              <span class="text-xs font-semibold text-cyan-400 mono">SENTINEL BUS LOG</span>
+              <button onclick="clearConsoleLog()" class="text-[10px] text-slate-500 hover:text-slate-300 mono underline">CLEAR</button>
+            </div>
+
+            <div id="telemetryLog" class="mt-2 overflow-y-auto space-y-1 text-[10px] mono text-slate-400 flex-1 pr-1">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- Core Physics Insight Card -->
+      <div class="rounded-xl bg-slate-900/60 border border-slate-800 p-4 text-xs text-slate-300 flex items-start space-x-3">
+        <svg class="w-5 h-5 text-cyan-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <div>
+          <span class="font-bold text-slate-100">Hydrodynamic-Thermodynamic Slosh Coupling:</span>
+          In microgravity ($Bo < 10$), propellant sloshing wicks cryogenic liquid up heated multi-layer insulation walls ($\Delta T > 0$). Thermal flashing nucleates micro-bubbles that do not instantly vent; instead, Coriolis and settling vectors channel these vapor clouds directly into the lower intake sump. The Sentinel prevents turbopump blade destruction by calculating the dynamic density gradient and executing precision milli-pulse settling thruster burns before cavitation inception.
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 2: NASA SBIR / STTR PROPOSAL PACKAGE   -->
+    <!-- ========================================== -->
+    <div id="tabContent-proposal" class="hidden space-y-8 max-w-5xl mx-auto py-2">
+      
+      <!-- Proposal Header Badge -->
+      <div class="rounded-2xl bg-gradient-to-r from-slate-900 via-slate-900 to-cyan-950/60 p-6 sm:p-8 hud-border">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+          <div class="space-y-1">
+            <div class="inline-flex items-center gap-2 px-2.5 py-1 rounded bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs mono">
+              <span>NASA SBIR PHASE I PROPOSAL SOLICITATION</span>
+              <span>•</span>
+              <span class="font-bold">ALLOCATION: $225,000</span>
+            </div>
+            <h2 class="text-xl sm:text-2xl font-bold text-white tracking-tight mt-2">
+              Autonomous Closed-Loop Cryogenic Slosh, Wall-Film Micro-Boiling & Turbopump Cavitation Inhibitor
+            </h2>
+            <p class="text-sm text-slate-400">
+              NASA Focus Area: Cryogenic Fluid Management (CFM) • Subtopic: ZBO Propellant Transfer, In-Space Storage, and Settling Transients
+            </p>
+          </div>
+
+          <div class="flex flex-col items-start sm:items-end justify-center bg-slate-950/80 px-4 py-3 rounded-xl border border-slate-800">
+            <span class="text-[10px] text-slate-400 mono">PROJECT DURATION</span>
+            <span class="text-sm font-bold text-cyan-400 mono">6 MONTHS (PHASE I)</span>
+            <span class="text-[10px] text-slate-500 mono mt-0.5">TRL PROGRESSION: 2 &rarr; 4</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Resolution of Reviewer Red Flags Section -->
+      <div class="rounded-xl bg-slate-900/80 border border-cyan-900/60 p-6 space-y-4">
+        <div class="flex items-center space-x-2 pb-3 border-b border-slate-800">
+          <span class="w-3 h-3 rounded-full bg-cyan-400"></span>
+          <h3 class="text-base font-bold text-cyan-300 mono">EXECUTIVE MITIGATION: NASA SBIR REVIEWER RED-FLAG RESOLUTION</h3>
+        </div>
+        <p class="text-sm text-slate-300 leading-relaxed">
+          The following section directly resolves the top technical vulnerabilities identified by NASA fluid-mechanics and propulsion review panels regarding the original conceptual demonstrator:
+        </p>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+          <!-- Item 1 -->
+          <div class="bg-slate-950/70 p-4 rounded-lg border border-slate-800">
+            <div class="flex items-center justify-between text-xs mono">
+              <span class="text-red-400 font-bold">PREVIOUS RED FLAG #1</span>
+              <span class="text-emerald-400">ENGINEERED FIX</span>
+            </div>
+            <h4 class="text-sm font-semibold text-slate-100 mt-1">The "Magic Sensor" Density Problem</h4>
+            <p class="text-xs text-slate-400 mt-1 leading-relaxed">
+              <strong class="text-slate-200">Solution:</strong> We do not assume a mythical monolithic point sensor. Intake void-fraction and bulk density ($\rho$) are measured via dual-modality: <strong>High-Frequency Radio Frequency Mass Gauging (RFMG)</strong> coupled with an annular <strong>Electrical Capacitance Tomography (ECT) ring</strong> installed flush on the engine sump inlet collar. This eliminates optical drift and provides microsecond dielectric permittivity measurement across LOX and $LH_2$ transitions.
+            </p>
+          </div>
+
+          <!-- Item 2 -->
+          <div class="bg-slate-950/70 p-4 rounded-lg border border-slate-800">
+            <div class="flex items-center justify-between text-xs mono">
+              <span class="text-red-400 font-bold">PREVIOUS RED FLAG #2</span>
+              <span class="text-emerald-400">ENGINEERED FIX</span>
+            </div>
+            <h4 class="text-sm font-semibold text-slate-100 mt-1">CFD vs. Flight Avionics Execution</h4>
+            <p class="text-xs text-slate-400 mt-1 leading-relaxed">
+              <strong class="text-slate-200">Solution:</strong> Full Navier-Stokes 3D volume-of-fluid micro-boil CFD is prohibitively slow for in-situ flight. Sentinel deploys a <strong>Reduced-Order Model (ROM) Extended Kalman Filter (EKF)</strong> pre-trained on open NASA Glenn CFM test stand datasets. The ROM solves modal slosh harmonics and lumped boundary layer film superheat equations at >50 Hz on flight-qualified rad-hard processors (e.g., RAD750 or Vorago ARM Cortex).
+            </p>
+          </div>
+
+          <!-- Item 3 -->
+          <div class="bg-slate-950/70 p-4 rounded-lg border border-slate-800">
+            <div class="flex items-center justify-between text-xs mono">
+              <span class="text-red-400 font-bold">PREVIOUS RED FLAG #3</span>
+              <span class="text-emerald-400">ENGINEERED FIX</span>
+            </div>
+            <h4 class="text-sm font-semibold text-slate-100 mt-1">GN&C Attitude Control Destabilization</h4>
+            <p class="text-xs text-slate-400 mt-1 leading-relaxed">
+              <strong class="text-slate-200">Solution:</strong> Settling burns cannot be commanded blindly without upsetting spacecraft pointing. Sentinel features a <strong>Coupled Torque-Balanced GN&C Arbiter</strong>. Pulsed settling thruster vectors are co-synthesized with spacecraft reaction wheels and opposed thruster pairs, guaranteeing net zero unwanted moment ($\Sigma M = 0$) during high-priority orbital burns.
+            </p>
+          </div>
+
+          <!-- Item 4 -->
+          <div class="bg-slate-950/70 p-4 rounded-lg border border-slate-800">
+            <div class="flex items-center justify-between text-xs mono">
+              <span class="text-red-400 font-bold">PREVIOUS RED FLAG #4</span>
+              <span class="text-emerald-400">ENGINEERED FIX</span>
+            </div>
+            <h4 class="text-sm font-semibold text-slate-100 mt-1">Empirical Validation Pathway</h4>
+            <p class="text-xs text-slate-400 mt-1 leading-relaxed">
+              <strong class="text-slate-200">Solution:</strong> Phase I terminates not in simple front-end graphics, but in <strong>empirical drop-tower test validation (2.2s / 5.2s at NASA GRC Zero-Gravity Facility)</strong> using cryogenic simulant fluid (Novec 1230 & Liquid Nitrogen $LN_2$) inside a transparent scaled tank equipped with the prototype ECT ring.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Phase I Work Plan & Deliverables (6 Months) -->
+      <div class="rounded-xl bg-slate-900/80 border border-slate-800 p-6 space-y-6">
+        <div>
+          <h3 class="text-base font-bold text-white mono">TECHNICAL WORK BREAKDOWN & MILESTONES</h3>
+          <p class="text-xs text-slate-400 mt-0.5">Rigorous execution structure aligned with NASA SBIR Phase I guidelines</p>
+        </div>
+
+        <div class="space-y-4">
+          <!-- Task 1 -->
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-lg bg-slate-950 border border-slate-800 text-xs">
+            <div class="space-y-1">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 mono font-bold text-[10px]">TASK 1.0 (M1-M2)</span>
+                <span class="font-bold text-slate-200">Reduced-Order Hydrodynamic & Wall Micro-Boil Model Formulation</span>
+              </div>
+              <p class="text-slate-400 text-[11px]">
+                Formulate non-linear low-gravity slosh pendular dynamics coupled with transient contact-line film boiling equations. Benchmark against NASA GRC historical cryogenic tank slosh data.
+              </p>
+            </div>
+            <span class="text-slate-400 mono mt-2 sm:mt-0 font-semibold">$38,000</span>
+          </div>
+
+          <!-- Task 2 -->
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-lg bg-slate-950 border border-slate-800 text-xs">
+            <div class="space-y-1">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 mono font-bold text-[10px]">TASK 2.0 (M2-M3)</span>
+                <span class="font-bold text-slate-200">ECT Collar Sensor & RF Gauging Architecture Design</span>
+              </div>
+              <p class="text-slate-400 text-[11px]">
+                Develop multi-electrode annular capacitance sensor geometry for sump feedline. Fabricate cryogenic-compatible test collar with 1 kHz demodulation hardware.
+              </p>
+            </div>
+            <span class="text-slate-400 mono mt-2 sm:mt-0 font-semibold">$52,000</span>
+          </div>
+
+          <!-- Task 3 -->
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-lg bg-slate-950 border border-slate-800 text-xs">
+            <div class="space-y-1">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 mono font-bold text-[10px]">TASK 3.0 (M3-M4)</span>
+                <span class="font-bold text-slate-200">Adaptive Closed-Loop RCS Settling Algorithm & GN&C Decoupling</span>
+              </div>
+              <p class="text-slate-400 text-[11px]">
+                Synthesize model predictive controller (MPC) calculating optimal pulsed thruster duty cycles against $a$ vs. $\rho$ phase margins while maintaining reaction wheel torque nulling.
+              </p>
+            </div>
+            <span class="text-slate-400 mono mt-2 sm:mt-0 font-semibold">$45,000</span>
+          </div>
+
+          <!-- Task 4 -->
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-lg bg-slate-950 border border-slate-800 text-xs">
+            <div class="space-y-1">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 mono font-bold text-[10px]">TASK 4.0 (M4-M5)</span>
+                <span class="font-bold text-slate-200">Benchtop Cryo-Simulant & Drop-Tower Microgravity Rig Test</span>
+              </div>
+              <p class="text-slate-400 text-[11px]">
+                Execute 1-g fluid injection tests and submit microgravity drop rig package. Validate bubble coalescence prevention and density recovery time under pulsed settling.
+              </p>
+            </div>
+            <span class="text-slate-400 mono mt-2 sm:mt-0 font-semibold">$64,000</span>
+          </div>
+
+          <!-- Task 5 -->
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-lg bg-slate-950 border border-slate-800 text-xs">
+            <div class="space-y-1">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 mono font-bold text-[10px]">TASK 5.0 (M6)</span>
+                <span class="font-bold text-slate-200">Phase II Commercialization Roadmap & NASA GRC/MSFC Final Report</span>
+              </div>
+              <p class="text-slate-400 text-[11px]">
+                Compile comprehensive Phase I validation report, deliverable embedded software library, and formal proposal for NASA SBIR Phase II ($850,000 sub-orbital flight test).
+              </p>
+            </div>
+            <span class="text-slate-400 mono mt-2 sm:mt-0 font-semibold">$26,000</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Itemized $225,000 Budget Breakdown Table -->
+      <div class="rounded-xl bg-slate-900/80 border border-slate-800 p-6 space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-800">
+          <div>
+            <h3 class="text-base font-bold text-white mono">ITEMIZED NASA SBIR PHASE I BUDGET</h3>
+            <span class="text-xs text-slate-400">Strictly adheres to standard federal SBIR cost-accounting thresholds</span>
+          </div>
+          <div class="text-right">
+            <span class="text-xs text-slate-400 mono">TOTAL CEILING:</span>
+            <span class="text-base font-bold text-amber-400 mono block">$225,000.00</span>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs text-left mono text-slate-300">
+            <thead class="bg-slate-950 text-slate-400 uppercase text-[10px] border-b border-slate-800">
+              <tr>
+                <th class="py-2.5 px-3">Cost Category</th>
+                <th class="py-2.5 px-3">Description & Personnel Allocation</th>
+                <th class="py-2.5 px-3 text-right">Direct Cost</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800/60">
+              <tr>
+                <td class="py-2.5 px-3 font-semibold text-slate-200">Direct Labor</td>
+                <td class="py-2.5 px-3 text-slate-400">Principal Investigator (Propulsion Ph.D, 500 hrs) + Lead Cryo Software Eng (650 hrs)</td>
+                <td class="py-2.5 px-3 text-right text-slate-200">$98,500</td>
+              </tr>
+              <tr>
+                <td class="py-2.5 px-3 font-semibold text-slate-200">Fringe Benefits</td>
+                <td class="py-2.5 px-3 text-slate-400">Calculated at standard rate (24.0% of direct labor base)</td>
+                <td class="py-2.5 px-3 text-right text-slate-200">$23,640</td>
+              </tr>
+              <tr>
+                <td class="py-2.5 px-3 font-semibold text-slate-200">Materials & Hardware</td>
+                <td class="py-2.5 px-3 text-slate-400">Custom ECT Sensor ring, FPGA high-rate ADC boards, Simulant test rig chamber</td>
+                <td class="py-2.5 px-3 text-right text-slate-200">$32,400</td>
+              </tr>
+              <tr>
+                <td class="py-2.5 px-3 font-semibold text-slate-200">Subcontract / Testing</td>
+                <td class="py-2.5 px-3 text-slate-400">Microgravity Drop Facility Rig Time & Cryogenic Fluid Bench Testing</td>
+                <td class="py-2.5 px-3 text-right text-slate-200">$28,000</td>
+              </tr>
+              <tr>
+                <td class="py-2.5 px-3 font-semibold text-slate-200">Indirect Costs (Overhead)</td>
+                <td class="py-2.5 px-3 text-slate-400">Facility, laboratory utilities, computer simulation clusters (15.5%)</td>
+                <td class="py-2.5 px-3 text-right text-slate-200">$27,760</td>
+              </tr>
+              <tr class="bg-slate-950/80 font-bold">
+                <td class="py-3 px-3 text-amber-400">Fee / Profit</td>
+                <td class="py-3 px-3 text-slate-400">Standard NASA SBIR Allowed Fee (6.95%)</td>
+                <td class="py-3 px-3 text-right text-amber-400">$14,700</td>
+              </tr>
+              <tr class="bg-cyan-950/40 font-bold text-sm">
+                <td class="py-3 px-3 text-cyan-300">Total Program Cost</td>
+                <td class="py-3 px-3 text-slate-400">Firm Fixed Price Phase I Deliverable Commitment</td>
+                <td class="py-3 px-3 text-right text-cyan-300">$225,000</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ========================================== -->
+    <!-- TAB 3: PARTNERSHIP & CONTACT MODULE        -->
+    <!-- ========================================== -->
+    <div id="tabContent-contact" class="hidden space-y-6 max-w-4xl mx-auto py-4">
+
+      <!-- Hero Pitch for Strategic Partners -->
+      <div class="rounded-2xl bg-gradient-to-r from-slate-900 via-slate-900 to-indigo-950/60 p-6 sm:p-8 hud-border">
+        <div class="space-y-2">
+          <span class="px-2.5 py-1 rounded bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 text-xs mono">STRATEGIC ALLIANCE & RESEARCH CO-BIDDING</span>
+          <h2 class="text-xl sm:text-2xl font-bold text-white tracking-tight">
+            Partner on NASA SBIR / STTR & Artemis CFM Architecture
+          </h2>
+          <p class="text-sm text-slate-300 leading-relaxed max-w-2xl">
+            We are actively assembling a joint commercial and academic consortium to co-bid the NASA Cryogenic Fluid Management (CFM) solicitation, targeting integration into Human Landing System (HLS), Mars Transit Stages, and commercial orbital depot architectures.
+          </p>
+        </div>
+      </div>
+
+      <!-- Collaboration Tracks Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        
+        <div class="bg-slate-900/90 p-5 rounded-xl hud-border space-y-3">
+          <div class="w-9 h-9 rounded-lg bg-cyan-950 border border-cyan-500/40 flex items-center justify-center text-cyan-400">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+          </div>
+          <h3 class="font-bold text-slate-100 text-sm">Aerospace Prime Contractors</h3>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            Integration of Sentinel's EKF slosh-boil estimator into flight GN&C suites for commercial lunar landers and orbital cryogenic depots.
+          </p>
+          <span class="inline-block text-[10px] text-cyan-400 mono">TRACK A: PHASE II/III SUBCONTRACTING</span>
+        </div>
+
+        <div class="bg-slate-900/90 p-5 rounded-xl hud-border space-y-3">
+          <div class="w-9 h-9 rounded-lg bg-amber-950 border border-amber-500/40 flex items-center justify-center text-amber-400">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+          </div>
+          <h3 class="font-bold text-slate-100 text-sm">University Cryo Labs (STTR)</h3>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            Co-principal investigator opportunities for university drop-tower facilities, two-phase cryo contact-line physics, and ECT ring hardware characterization.
+          </p>
+          <span class="inline-block text-[10px] text-amber-400 mono">TRACK B: STTR 30% ACADEMIC SHARE</span>
+        </div>
+
+        <div class="bg-slate-900/90 p-5 rounded-xl hud-border space-y-3">
+          <div class="w-9 h-9 rounded-lg bg-emerald-950 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+          </div>
+          <h3 class="font-bold text-slate-100 text-sm">Hardware & Sensor Vendors</h3>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            Suppliers of radiation-tolerant microcontrollers, cryogenic RF cabling, capacitance feedthroughs, and low-flow cryogenic mass sensors.
+          </p>
+          <span class="inline-block text-[10px] text-emerald-400 mono">TRACK C: FLIGHT SENSOR VENDOR</span>
+        </div>
+
+      </div>
+
+      <!-- Direct Contact Card with explicit email: support@rfwavecode.com -->
+      <div class="rounded-2xl bg-slate-900 hud-border p-6 sm:p-8 space-y-6">
+        
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-800 gap-4">
+          <div>
+            <h3 class="text-base font-bold text-white mono uppercase">DIRECT PARTNERSHIP CHANNEL</h3>
+            <p class="text-xs text-slate-400 mt-0.5">Reach out immediately for Letters of Support (LoS) or joint proposal drafting</p>
+          </div>
+
+          <!-- Highlighted Partner Email Badge with Quick Copy -->
+          <div class="flex items-center space-x-2 bg-slate-950 border border-cyan-500/50 px-4 py-2 rounded-xl">
+            <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+            <span class="text-sm font-bold text-cyan-300 mono select-all">support@rfwavecode.com</span>
+            <button onclick="copyEmail()" title="Copy Email to Clipboard" class="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white transition">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Partnership Submission Form -->
+        <form onsubmit="handlePartnerSubmit(event)" class="space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-medium text-slate-300 mb-1">Your Name / Title</label>
+              <input type="text" id="partnerName" required placeholder="Dr. Alex Vance, Principal Propulsion Lead" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-cyan-500">
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-slate-300 mb-1">Organization / University / Center</label>
+              <input type="text" id="partnerOrg" required placeholder="Orbital Propulsion Dynamics / GRC" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-cyan-500">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-medium text-slate-300 mb-1">Your Direct Contact Email</label>
+              <input type="email" id="partnerEmail" required placeholder="a.vance@aerospace-dyn.com" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-cyan-500">
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-slate-300 mb-1">Partnership Interest Track</label>
+              <select id="partnerTrack" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-cyan-500">
+                <option value="prime">NASA SBIR Phase I Co-Bidding / Subcontractor</option>
+                <option value="sttr">Academic STTR Research Partner (30% Workshare)</option>
+                <option value="flight">Suborbital / Microgravity Drop-Tower Testing Rig</option>
+                <option value="commercial">Commercial Depot Flight Infusion & Licensing</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-slate-300 mb-1">Technical Scope / Capability Statement</label>
+            <textarea id="partnerMessage" rows="3" required placeholder="Describe your team's cryogenic fluid test facilities, GN&C expertise, or letter of support capabilities..." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-cyan-500"></textarea>
+          </div>
+
+          <div class="flex flex-wrap items-center justify-between gap-3 pt-2">
+            <span class="text-[11px] text-slate-400">
+              Direct routing to: <span class="mono text-cyan-300">support@rfwavecode.com</span>
+            </span>
+            <button type="submit" class="px-5 py-2.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-black font-bold text-xs mono transition shadow-lg flex items-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+              Transmit Partnership Inquiry
+            </button>
+          </div>
+        </form>
+
+        <!-- Message Box Confirmation -->
+        <div id="contactSuccessMsg" class="hidden rounded-lg bg-emerald-950/80 border border-emerald-500/80 p-4 transition-all duration-200">
+          <div class="flex items-center space-x-2 text-xs text-emerald-300">
+            <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+            <span class="font-bold">INQUIRY PACKET DISPATCHED:</span>
+            <span>Your partnership request has been staged for delivery to <strong class="underline">support@rfwavecode.com</strong>. The technical team will respond with NDA and technical specifications within 24 hours.</span>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="border-t border-slate-800/80 bg-slate-950/90 py-4 text-xs text-slate-400 mono">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center space-x-2">
+        <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
+        <span>CRYO-CFM SENTINEL • ZERO-BOIL-OFF (ZBO) PROTOCOL</span>
+      </div>
+      <div class="flex items-center space-x-4">
+        <span>PARTNERSHIP DESK: <a href="mailto:support@rfwavecode.com" class="text-cyan-400 hover:underline">support@rfwavecode.com</a></span>
+        <span class="text-slate-600">|</span>
+        <span>TRL 3&rarr;4 VALIDATION READY</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- NOTIFICATION TOAST -->
+  <div id="toastBox" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none">
+    <div class="bg-slate-900 border border-cyan-500 text-cyan-200 px-4 py-3 rounded-xl shadow-2xl text-xs mono flex items-center space-x-2">
+      <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+      <span id="toastMsg">Action completed successfully</span>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- JAVASCRIPT SIMULATION & CONTROLLER ENGINE  -->
+  <!-- ========================================== -->
+  <script>
+    /* ----------------------------------------------------
+       GLOBAL STATE & PARAMETERS
+    ---------------------------------------------------- */
+    const STATE = {
+      activeTab: 'sim',
+      wallSuperheat: 5.2, // K above saturation
+      accelLat: 0.035,    // m/s^2 lateral acceleration
+      autoRCS: true,      // Closed loop controller state
+      rcsThrust: 0,       // Current RCS Settling Force (N)
+      sloshTheta: 0,      // Slosh wave angle (rad)
+      sloshOmega: 0,      // Slosh velocity
+      sloshAmplitude: 0.12,// meters
+      bulkDensity: 1140.2,// kg/m^3 at sump intake
+      cavitationCritical: 1105.0, // kg/m^3 trip threshold
+      voidFraction: 0.02, // percentage
+      evapRate: 0.074,    // g/s
+      bubbles: [],        // active micro-boil vapor pockets
+      historyRho: [],     // phase plane history
+      historyA: [],
+      lastLogTime: 0
+    };
+
+    /* ----------------------------------------------------
+       TAB NAVIGATION
+    ---------------------------------------------------- */
+    function switchTab(tabId) {
+      STATE.activeTab = tabId;
+      const tabs = ['sim', 'proposal', 'contact'];
+      tabs.forEach(t => {
+        const content = document.getElementById(`tabContent-${t}`);
+        const btn = document.getElementById(`tabBtn-${t}`);
+        if (t === tabId) {
+          content.classList.remove('hidden');
+          btn.className = "tab-button border-b-2 border-cyan-500 text-cyan-400 py-3 px-1 inline-flex items-center gap-2";
+        } else {
+          content.classList.add('hidden');
+          btn.className = "tab-button border-b-2 border-transparent text-slate-400 hover:text-slate-200 py-3 px-1 inline-flex items-center gap-2";
+        }
+      });
+
+      if (tabId === 'sim') {
+        resizeCanvases();
+      }
+    }
+
+    /* ----------------------------------------------------
+       CONTROLLER & USER INPUTS
+    ---------------------------------------------------- */
+    function updateWallTemp(val) {
+      STATE.wallSuperheat = parseFloat(val);
+      document.getElementById('wallSuperheatVal').innerText = STATE.wallSuperheat.toFixed(1) + ' K';
+      document.getElementById('wallTempDisplay').innerText = `+${STATE.wallSuperheat.toFixed(1)} K (${STATE.wallSuperheat > 6 ? 'Intense Boiling' : 'Micro-boil'})`;
+      document.getElementById('canvasWallLabel').innerText = (90.18 + STATE.wallSuperheat).toFixed(1) + ' K';
+      logTelemetry(`PARAM CHG: Wall Superheat updated to +${STATE.wallSuperheat.toFixed(1)} K`);
+    }
+
+    function updateAccel(val) {
+      STATE.accelLat = parseFloat(val);
+      document.getElementById('accelVal').innerText = STATE.accelLat.toFixed(3) + ' m/s²';
+      logTelemetry(`DISTURBANCE: Lateral g-transient set to ${STATE.accelLat.toFixed(3)} m/s²`);
+    }
+
+    function toggleController(checked) {
+      STATE.autoRCS = checked;
+      logTelemetry(`CONTROLLER: Auto RCS Settling Loop ${checked ? 'ENGAGED' : 'DISENGAGED (MANUAL DRIFT)'}`);
+    }
+
+    function induceImpulse() {
+      STATE.sloshOmega += 0.8;
+      STATE.sloshAmplitude = Math.min(0.35, STATE.sloshAmplitude + 0.15);
+      showToast("Spacecraft slew impulse injected! Slosh amplitude elevated.");
+      logTelemetry("IMPULSE: 0.15 m wave front induced across tank walls");
+    }
+
+    function emergencyRCSBoost() {
+      STATE.rcsThrust = 150.0;
+      STATE.sloshOmega *= 0.2;
+      STATE.sloshAmplitude *= 0.3;
+      STATE.bulkDensity = 1138.0;
+      showToast("EMERGENCY RCS OVERRIDE: Sump cleared under 150N settling pulse.");
+      logTelemetry("CRITICAL OVERRIDE: Full 150N RCS settling burn executed");
+    }
+
+    function copyEmail() {
+      const email = 'support@rfwavecode.com';
+      const tempInput = document.createElement('input');
+      tempInput.value = email;
+      document.body.appendChild(tempInput);
+      tempInput.select();
+      document.execCommand('copy');
+      document.body.removeChild(tempInput);
+      showToast("Email copied: support@rfwavecode.com");
+    }
+
+    function handlePartnerSubmit(e) {
+      e.preventDefault();
+      const name = document.getElementById('partnerName').value;
+      const org = document.getElementById('partnerOrg').value;
+      const email = document.getElementById('partnerEmail').value;
+      const track = document.getElementById('partnerTrack').value;
+      
+      document.getElementById('contactSuccessMsg').classList.remove('hidden');
+      showToast(`Inquiry staged for support@rfwavecode.com from ${org}`);
+      logTelemetry(`PARTNERSHIP: Direct inquiry logged for ${name} (${org}) -> support@rfwavecode.com`);
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toastBox');
+      document.getElementById('toastMsg').innerText = msg;
+      toast.classList.remove('translate-y-20', 'opacity-0');
+      setTimeout(() => {
+        toast.classList.add('translate-y-20', 'opacity-0');
+      }, 3500);
+    }
+
+    function logTelemetry(msg) {
+      const now = new Date();
+      const timeStr = now.toTimeString().split(' ')[0] + '.' + Math.floor(now.getMilliseconds()/100);
+      const logContainer = document.getElementById('telemetryLog');
+      if (!logContainer) return;
+
+      const item = document.createElement('div');
+      item.className = "leading-tight py-0.5 border-b border-slate-900";
+      item.innerHTML = `<span class="text-cyan-600">[${timeStr}]</span> ${msg}`;
+      logContainer.prepend(item);
+
+      // limit log count
+      if (logContainer.children.length > 40) {
+        logContainer.removeChild(logContainer.lastChild);
+      }
+    }
+
+    function clearConsoleLog() {
+      const logContainer = document.getElementById('telemetryLog');
+      if (logContainer) logContainer.innerHTML = '';
+      logTelemetry("Log buffer initialized");
+    }
+
+    /* ----------------------------------------------------
+       CANVAS & MULTIPHASE SIMULATION SETUP
+    ---------------------------------------------------- */
+    let tankCanvas, tCtx;
+    let phaseCanvas, pCtx;
+
+    function initCanvases() {
+      tankCanvas = document.getElementById('tankCanvas');
+      tCtx = tankCanvas.getContext('2d');
+      phaseCanvas = document.getElementById('phaseCanvas');
+      pCtx = phaseCanvas.getContext('2d');
+      resizeCanvases();
+      window.addEventListener('resize', resizeCanvases);
+    }
+
+    function resizeCanvases() {
+      if (tankCanvas && tankCanvas.parentElement) {
+        tankCanvas.width = tankCanvas.parentElement.clientWidth;
+        tankCanvas.height = tankCanvas.parentElement.clientHeight;
+      }
+      if (phaseCanvas && phaseCanvas.parentElement) {
+        phaseCanvas.width = phaseCanvas.parentElement.clientWidth;
+        phaseCanvas.height = phaseCanvas.parentElement.clientHeight;
+      }
+    }
+
+    /* Micro-Boil Bubble Generator */
+    function spawnWallBubbles(width, height) {
+      // Spawn bubbles near the wall if fluid is high enough and wall is hot
+      if (Math.random() < (STATE.wallSuperheat / 15) * 0.85) {
+        const side = Math.random() > 0.5 ? 1 : -1;
+        const x = side === 1 ? width * 0.85 - Math.random() * 20 : width * 0.15 + Math.random() * 20;
+        const y = height * 0.45 + (Math.random() * height * 0.3);
+        STATE.bubbles.push({
+          x: x,
+          y: y,
+          vx: -side * (0.3 + Math.random() * 0.6),
+          vy: 0.1 + Math.random() * 0.4, // microgravity drifting downwards to sump under settling
+          radius: 1.5 + Math.random() * 3.5,
+          alpha: 0.9,
+          life: 1.0
+        });
+      }
+    }
+
+    /* ----------------------------------------------------
+       MAIN PHYSICS & RENDER LOOP
+    ---------------------------------------------------- */
+    let lastTime = performance.now();
+
+    function physicsLoop(timestamp) {
+      const dt = Math.min((timestamp - lastTime) / 1000, 0.05);
+      lastTime = timestamp;
+
+      // 1. Hydrodynamic Slosh Physics (Pendular non-linear harmonic)
+      const omega0 = 2 * Math.PI * 0.38; // natural frequency
+      const damping = 0.4 + (STATE.rcsThrust * 0.02); // RCS settling accelerates damping
+      
+      // Slosh angular acceleration driven by lateral acceleration transient
+      const alpha = - (omega0 * omega0) * Math.sin(STATE.sloshTheta) 
+                    - damping * STATE.sloshOmega 
+                    + (STATE.accelLat * 8.0);
+
+      STATE.sloshOmega += alpha * dt;
+      STATE.sloshTheta += STATE.sloshOmega * dt;
+      
+      // Slosh amplitude calculation
+      STATE.sloshAmplitude = Math.abs(Math.sin(STATE.sloshTheta)) * 0.28;
+
+      // 2. Wall Evaporation & Micro-Boil Rate
+      STATE.evapRate = (STATE.wallSuperheat * 0.012) + (STATE.sloshAmplitude * 0.15);
+
+      // 3. Autonomous RCS Settling Controller Loop
+      if (STATE.autoRCS) {
+        // Density error trigger threshold
+        const densityShortfall = STATE.cavitationCritical + 15.0 - STATE.bulkDensity;
+        if (densityShortfall > 0 || STATE.sloshAmplitude > 0.16) {
+          // Proportional-Derivative Settling Pulse
+          const demandThrust = Math.min(120.0, Math.max(15.0, densityShortfall * 6.5 + STATE.sloshAmplitude * 180.0));
+          STATE.rcsThrust += (demandThrust - STATE.rcsThrust) * (dt * 8.0);
+        } else {
+          // Ramp down RCS gently
+          STATE.rcsThrust += (0 - STATE.rcsThrust) * (dt * 4.0);
+        }
+      } else {
+        // Manual / Idle drift
+        STATE.rcsThrust += (0 - STATE.rcsThrust) * (dt * 2.0);
+      }
+
+      // 4. Sump Bulk Density Calculation
+      // Settling increases density back to nominal; slosh + boiling collapses it
+      const densityDrop = (STATE.sloshAmplitude * 65.0) + (STATE.wallSuperheat * 3.8);
+      const settlingRecovery = STATE.rcsThrust * 0.85;
+      const targetDensity = 1141.0 - densityDrop + settlingRecovery;
+      
+      STATE.bulkDensity += (targetDensity - STATE.bulkDensity) * (dt * 3.5);
+      STATE.bulkDensity = Math.max(1050.0, Math.min(1142.0, STATE.bulkDensity));
+      
+      STATE.voidFraction = Math.max(0.01, ((1141.0 - STATE.bulkDensity) / 1141.0) * 100);
+
+      // 5. Check Turbopump Cavitation Risk
+      const isCavitating = STATE.bulkDensity < STATE.cavitationCritical;
+      const alertBanner = document.getElementById('cavitationBanner');
+      if (isCavitating) {
+        alertBanner.classList.remove('hidden');
+        document.getElementById('alertDensityVal').innerText = STATE.bulkDensity.toFixed(1);
+        document.getElementById('headerNPSH').innerText = "TRIP WARNING (LOW NPSH)";
+        document.getElementById('headerNPSH').className = "text-rose-400 font-bold animate-pulse";
+      } else {
+        alertBanner.classList.add('hidden');
+        const npshMargin = ((STATE.bulkDensity - 1090.0) / 20.0).toFixed(2);
+        document.getElementById('headerNPSH').innerText = `+${npshMargin} m (NOMINAL)`;
+        document.getElementById('headerNPSH').className = "text-cyan-400 font-semibold";
+      }
+
+      // Update UI Indicators
+      updateUI();
+
+      // Render Graphics
+      renderTank();
+      renderPhaseRadar();
+
+      requestAnimationFrame(physicsLoop);
+    }
+
+    function updateUI() {
+      // Metric numbers
+      document.getElementById('metricSloshPeak').innerText = (STATE.sloshAmplitude * 100).toFixed(1) + ' cm';
+      document.getElementById('metricEvapRate').innerText = STATE.evapRate.toFixed(3) + ' g/s';
+      document.getElementById('metricVoidFrac').innerText = STATE.voidFraction.toFixed(2) + '%';
+      
+      const densEl = document.getElementById('canvasDensityVal');
+      densEl.innerText = STATE.bulkDensity.toFixed(1) + ' kg/m³';
+      densEl.className = STATE.bulkDensity < STATE.cavitationCritical ? 'text-red-400 font-bold text-sm animate-pulse' : 'text-cyan-400 font-bold text-sm';
+
+      // RCS Throttle Bar & text
+      const rcsBar = document.getElementById('rcsThrottleBar');
+      const rcsText = document.getElementById('rcsState');
+      const pct = Math.min(100, (STATE.rcsThrust / 120.0) * 100);
+      rcsBar.style.width = pct + '%';
+      if (STATE.rcsThrust > 2.0) {
+        rcsText.innerText = `FIRING (${STATE.rcsThrust.toFixed(1)} N)`;
+        rcsText.className = "mono font-bold text-emerald-400 animate-pulse";
+      } else {
+        rcsText.innerText = `STANDBY (0.0 N)`;
+        rcsText.className = "mono font-bold text-slate-400";
+      }
+    }
+
+    /* ----------------------------------------------------
+       RENDER 1: TANK CUTAWAY CANVAS
+    ---------------------------------------------------- */
+    function renderTank() {
+      if (!tCtx || !tankCanvas) return;
+      const w = tankCanvas.width;
+      const h = tankCanvas.height;
+
+      tCtx.clearRect(0, 0, w, h);
+
+      // Tank Geometry Definitions
+      const tankLeft = w * 0.15;
+      const tankRight = w * 0.85;
+      const tankWidth = tankRight - tankLeft;
+      const tankTop = h * 0.15;
+      const tankBottom = h * 0.85;
+      const sumpWidth = w * 0.22;
+      const sumpLeft = (w - sumpWidth) / 2;
+      const sumpRight = sumpLeft + sumpWidth;
+
+      // 1. Tank Hull Outline
+      tCtx.save();
+      tCtx.strokeStyle = "rgba(71, 85, 105, 0.6)";
+      tCtx.lineWidth = 4;
+      tCtx.beginPath();
+      // Outer shell
+      tCtx.arc((tankLeft + tankRight) / 2, tankTop + 30, tankWidth / 2, Math.PI, 0, false);
+      tCtx.lineTo(tankRight, tankBottom - 30);
+      tCtx.quadraticCurveTo(tankRight, tankBottom, sumpRight, tankBottom);
+      tCtx.lineTo(sumpRight, tankBottom + 25);
+      tCtx.lineTo(sumpLeft, tankBottom + 25);
+      tCtx.lineTo(sumpLeft, tankBottom);
+      tCtx.quadraticCurveTo(tankLeft, tankBottom, tankLeft, tankBottom - 30);
+      tCtx.closePath();
+      tCtx.stroke();
+
+      // MLI Wall Thermal Glow (Superheat indicator)
+      const glowAlpha = Math.min(0.8, STATE.wallSuperheat / 12.0);
+      tCtx.strokeStyle = `rgba(245, 158, 11, ${glowAlpha})`;
+      tCtx.lineWidth = 3;
+      tCtx.stroke();
+      tCtx.restore();
+
+      // 2. Liquid Surface Curve (Slosh angle + meniscus in microgravity)
+      tCtx.save();
+      tCtx.beginPath();
+      const waveOffset = Math.sin(STATE.sloshTheta) * (h * 0.18);
+      const midLiquidY = h * 0.52;
+      const leftY = midLiquidY - waveOffset;
+      const rightY = midLiquidY + waveOffset;
+
+      tCtx.moveTo(tankLeft + 2, leftY);
+      tCtx.bezierCurveTo(
+        tankLeft + tankWidth * 0.35, leftY + (waveOffset * 0.5),
+        tankLeft + tankWidth * 0.65, rightY - (waveOffset * 0.5),
+        tankRight - 2, rightY
+      );
+      tCtx.lineTo(tankRight - 2, tankBottom - 30);
+      tCtx.quadraticCurveTo(tankRight - 2, tankBottom, sumpRight - 2, tankBottom);
+      tCtx.lineTo(sumpRight - 2, tankBottom + 20);
+      tCtx.lineTo(sumpLeft + 2, tankBottom + 20);
+      tCtx.lineTo(sumpLeft + 2, tankBottom);
+      tCtx.quadraticCurveTo(tankLeft + 2, tankBottom, tankLeft + 2, tankBottom - 30);
+      tCtx.closePath();
+
+      // Liquid Gradient Fill (Subcooled Cryogen)
+      const liqGrad = tCtx.createLinearGradient(0, tankTop, 0, tankBottom + 20);
+      if (STATE.bulkDensity < STATE.cavitationCritical) {
+        liqGrad.addColorStop(0, "rgba(225, 29, 72, 0.45)");
+        liqGrad.addColorStop(1, "rgba(244, 63, 94, 0.75)");
+      } else {
+        liqGrad.addColorStop(0, "rgba(6, 182, 212, 0.45)");
+        liqGrad.addColorStop(1, "rgba(14, 116, 144, 0.85)");
+      }
+      tCtx.fillStyle = liqGrad;
+      tCtx.fill();
+      tCtx.restore();
+
+      // 3. Wall Contact Meniscus Micro-Boiling Flashes
+      tCtx.save();
+      const flashGradLeft = tCtx.createRadialGradient(tankLeft + 10, leftY, 2, tankLeft + 10, leftY, 40);
+      flashGradLeft.addColorStop(0, `rgba(251, 191, 36, ${0.4 + STATE.wallSuperheat*0.04})`);
+      flashGradLeft.addColorStop(1, "transparent");
+      tCtx.fillStyle = flashGradLeft;
+      tCtx.beginPath();
+      tCtx.arc(tankLeft + 10, leftY, 40, 0, Math.PI * 2);
+      tCtx.fill();
+
+      const flashGradRight = tCtx.createRadialGradient(tankRight - 10, rightY, 2, tankRight - 10, rightY, 40);
+      flashGradRight.addColorStop(0, `rgba(251, 191, 36, ${0.4 + STATE.wallSuperheat*0.04})`);
+      flashGradRight.addColorStop(1, "transparent");
+      tCtx.fillStyle = flashGradRight;
+      tCtx.beginPath();
+      tCtx.arc(tankRight - 10, rightY, 40, 0, Math.PI * 2);
+      tCtx.fill();
+      tCtx.restore();
+
+      // 4. Update and Render Micro-Bubbles
+      spawnWallBubbles(w, h);
+      for (let i = STATE.bubbles.length - 1; i >= 0; i--) {
+        const b = STATE.bubbles[i];
+        b.x += b.vx;
+        b.y += b.vy + (STATE.rcsThrust * 0.015); // pulled to bottom faster under RCS
+        b.life -= 0.008;
+
+        if (b.y > tankBottom + 15 || b.life <= 0) {
+          STATE.bubbles.splice(i, 1);
+          continue;
+        }
+
+        tCtx.save();
+        tCtx.beginPath();
+        tCtx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+        tCtx.fillStyle = `rgba(254, 240, 138, ${b.life * 0.85})`;
+        tCtx.fill();
+        tCtx.strokeStyle = "rgba(245, 158, 11, 0.9)";
+        tCtx.lineWidth = 1;
+        tCtx.stroke();
+        tCtx.restore();
+      }
+
+      // 5. Sump Intake Collar Ring (Represents our ECT Tomography Sensor Ring!)
+      tCtx.save();
+      tCtx.fillStyle = "#0284c7";
+      tCtx.fillRect(sumpLeft - 4, tankBottom + 8, sumpWidth + 8, 8);
+      tCtx.strokeStyle = "#38bdf8";
+      tCtx.lineWidth = 1.5;
+      tCtx.strokeRect(sumpLeft - 4, tankBottom + 8, sumpWidth + 8, 8);
+
+      tCtx.fillStyle = "#e0f2fe";
+      tCtx.font = "9px 'JetBrains Mono', monospace";
+      tCtx.textAlign = "center";
+      tCtx.fillText("ECT COLLAR DENSITY SENSOR", w / 2, tankBottom + 15);
+      tCtx.restore();
+
+      // 6. Settling Thrust Jets Animation at Tank Dome
+      if (STATE.rcsThrust > 2.0) {
+        tCtx.save();
+        const thrusterY = tankTop - 8;
+        const thrustHeight = Math.min(45, (STATE.rcsThrust / 120.0) * 45);
+
+        // Left RCS thruster plume
+        const plumeL = tCtx.createLinearGradient(tankLeft + 20, thrusterY, tankLeft + 20, thrusterY - thrustHeight);
+        plumeL.addColorStop(0, "rgba(56, 189, 248, 0.9)");
+        plumeL.addColorStop(1, "transparent");
+        tCtx.fillStyle = plumeL;
+        tCtx.beginPath();
+        tCtx.moveTo(tankLeft + 15, thrusterY);
+        tCtx.lineTo(tankLeft + 25, thrusterY);
+        tCtx.lineTo(tankLeft + 20, thrusterY - thrustHeight);
+        tCtx.closePath();
+        tCtx.fill();
+
+        // Right RCS thruster plume
+        const plumeR = tCtx.createLinearGradient(tankRight - 20, thrusterY, tankRight - 20, thrusterY - thrustHeight);
+        plumeR.addColorStop(0, "rgba(56, 189, 248, 0.9)");
+        plumeR.addColorStop(1, "transparent");
+        tCtx.fillStyle = plumeR;
+        tCtx.beginPath();
+        tCtx.moveTo(tankRight - 25, thrusterY);
+        tCtx.lineTo(tankRight - 15, thrusterY);
+        tCtx.lineTo(tankRight - 20, thrusterY - thrustHeight);
+        tCtx.closePath();
+        tCtx.fill();
+
+        tCtx.restore();
+      }
+    }
+
+    /* ----------------------------------------------------
+       RENDER 2: PHASE PLANE RADAR CANVAS (a vs rho)
+    ---------------------------------------------------- */
+    function renderPhaseRadar() {
+      if (!pCtx || !phaseCanvas) return;
+      const w = phaseCanvas.width;
+      const h = phaseCanvas.height;
+
+      pCtx.clearRect(0, 0, w, h);
+
+      // Save state trajectory history
+      STATE.historyRho.push(STATE.bulkDensity);
+      STATE.historyA.push(STATE.accelLat);
+      if (STATE.historyRho.length > 50) {
+        STATE.historyRho.shift();
+        STATE.historyA.shift();
+      }
+
+      // Coordinates mapping:
+      // X-axis: Bulk density rho (1060 to 1150 kg/m^3)
+      // Y-axis: Lateral accel a (0.0 to 0.25 m/s^2)
+      function mapX(rho) {
+        return ((rho - 1060) / (1150 - 1060)) * (w - 30) + 20;
+      }
+      function mapY(a) {
+        return h - 20 - ((a / 0.25) * (h - 35));
+      }
+
+      // Draw Grid Lines
+      pCtx.save();
+      pCtx.strokeStyle = "rgba(51, 65, 85, 0.4)";
+      pCtx.lineWidth = 1;
+
+      // Critical Cavitation Trip Line (Vertical dashed red)
+      const tripX = mapX(STATE.cavitationCritical);
+      pCtx.beginPath();
+      pCtx.setLineDash([4, 4]);
+      pCtx.moveTo(tripX, 10);
+      pCtx.lineTo(tripX, h - 20);
+      pCtx.strokeStyle = "rgba(239, 68, 68, 0.8)";
+      pCtx.stroke();
+      pCtx.setLineDash([]);
+
+      pCtx.fillStyle = "rgba(239, 68, 68, 0.8)";
+      pCtx.font = "8px 'JetBrains Mono', monospace";
+      pCtx.fillText("CAVITATION TRIP", tripX + 4, 20);
+
+      // Safe Core Boundary (Green zone)
+      pCtx.fillStyle = "rgba(16, 185, 129, 0.08)";
+      pCtx.fillRect(tripX, 10, w - tripX - 10, h - 30);
+
+      // Axis labels
+      pCtx.fillStyle = "#64748b";
+      pCtx.font = "9px 'JetBrains Mono', monospace";
+      pCtx.fillText("ρ (1060)", 15, h - 6);
+      pCtx.fillText("1140 kg/m³", w - 75, h - 6);
+      pCtx.fillText("0.25g", 4, 18);
+      pCtx.fillText("0g", 8, h - 22);
+
+      // Plot Trajectory Breadcrumbs
+      pCtx.beginPath();
+      pCtx.strokeStyle = "rgba(56, 189, 248, 0.35)";
+      pCtx.lineWidth = 1.5;
+      for (let i = 0; i < STATE.historyRho.length; i++) {
+        const x = mapX(STATE.historyRho[i]);
+        const y = mapY(STATE.historyA[i]);
+        if (i === 0) pCtx.moveTo(x, y);
+        else pCtx.lineTo(x, y);
+      }
+      pCtx.stroke();
+
+      // Current State Point
+      const curX = mapX(STATE.bulkDensity);
+      const curY = mapY(STATE.accelLat);
+
+      pCtx.beginPath();
+      pCtx.arc(curX, curY, 5, 0, Math.PI * 2);
+      pCtx.fillStyle = STATE.bulkDensity < STATE.cavitationCritical ? "#ef4444" : "#38bdf8";
+      pCtx.fill();
+      pCtx.strokeStyle = "#ffffff";
+      pCtx.lineWidth = 1.5;
+      pCtx.stroke();
+
+      pCtx.restore();
+    }
+
+    /* ----------------------------------------------------
+       INITIALIZATION
+    ---------------------------------------------------- */
+    window.onload = function() {
+      initCanvases();
+      logTelemetry("CRYO-CFM Sentinel initialized in Trans-Mars Profile");
+      logTelemetry("ECT Tomography ring telemetry linked at 1.0 kHz");
+      logTelemetry("ROM-EKF Slosh-Boil Reduced Model running at 60 Hz");
+      requestAnimationFrame(physicsLoop);
+    };
+  </script>
+</body>
+</html>
